@@ -77,12 +77,6 @@ std::unordered_map<std::string, std::string> Utility::ParseArgs(int argc, char* 
                 std::string key = arg.substr(2, eqPos - 2);
                 std::string value = arg.substr(eqPos + 1);
                 args[key] = value;
-            } else if (i + 1 < argc) {
-                // Format: --key value
-                std::string key = arg.substr(2);
-                std::string value = argv[i + 1];
-                args[key] = value;
-                ++i;  // skip next arg because it's a value
             } else {
                 // Flag without value
                 std::string key = arg.substr(2);

@@ -80,9 +80,9 @@ void usage() {
     std::cout << "ARGUMENTS:\n";
     std::cout << "    --help        Show this help list.\n";
     std::cout << "    --version     Show version number\n";
-    std::cout << "    --rgb {rgb}   View a color in rgb format.\n";
-    std::cout << "    --hex {hex}   View a color in hex format.\n";
-    std::cout << "    --size {num}  Number of pixels for width and hight.\n";
+    std::cout << "    --rgb={rgb}   View a color in rgb format.\n";
+    std::cout << "    --hex={hex}   View a color in hex format.\n";
+    std::cout << "    --size={num}  Number of pixels for width and hight.\n";
     std::cout << "    --output-hex  Set output format to be hex instead of rgb.\n";
     std::cout << "\n";
     std::cout << "TUI CONTROLLS:\n";
