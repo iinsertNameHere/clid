@@ -21,8 +21,8 @@ $ clid
 # Same as before but output in hex format.
 $ clid --output-hex
 
-# This is an example how to pipe the output into a file.
-$ clid | tee /dev/tty > output.txt
+# This is an example how to pipe the output of clid into wl-copy
+$ ./clid --output-hex | tee /dev/tty | tail -n 1 | wl-copy
 
 # Use --help to get a list of all arguments and view tui inputs.
 $ clid --help

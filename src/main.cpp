@@ -299,7 +299,7 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < X_SIZE + 5; i++) std::cout << " ";
         std::cout << "\n";
     }
-    std::cout << "\r\033[" + std::to_string(lines) + "A";
+    std::cout << "\r\033[" + std::to_string(lines) + "A" << "\n";
 
     if (!hexOutput) std::cout << std::to_string(selectedColor.r) << " " << std::to_string(selectedColor.g) << " " << std::to_string(selectedColor.b) << "\n";
     else std::cout << Utility::RGBtoHEX(selectedColor.r, selectedColor.g, selectedColor.b) << "\n";
