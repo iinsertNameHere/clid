@@ -9,7 +9,7 @@
 #include <vector>
 #include <iomanip>
 
-#define VERSION "v0.1.1"
+#define VERSION "v1.0.0"
 
 enum class Format { RGB, HEX, CMYK, HSL };
 
