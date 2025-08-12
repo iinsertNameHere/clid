@@ -11,6 +11,7 @@
 - View RGB and HEX colors.
 - Change TUI scaling.
 - Use output in your own scripts or tools.
+- Suports RGB, HEX, HSL, CMYK
 
 ## Usage
 
@@ -18,11 +19,11 @@
 # Run clid in normal mode. This lets you choose a color and outputs it to stdout on quit.
 $ clid
 
-# Same as before but output in hex format.
-$ clid --output-hex
+# Same as before but output in cmyk format.
+$ clid --format=cmyk
 
 # This is an example how to pipe the output of clid into wl-copy
-$ ./clid --output-hex | tee /dev/tty | tail -n 1 | wl-copy
+$ ./clid --format=hex | tee /dev/tty | tail -n 1 | wl-copy
 
 # Use --help to get a list of all arguments and view tui inputs.
 $ clid --help

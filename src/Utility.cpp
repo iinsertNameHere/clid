@@ -22,35 +22,6 @@ void Utility::ZipStrings(std::string& buffer, const std::string& s1, const std::
     buffer = result.str();
 }
 
-std::string Utility::RGBtoHEX(uint8_t r, uint8_t g, uint8_t b) {
-    std::ostringstream oss;
-    oss << '#' 
-        << std::hex << std::uppercase << std::setfill('0') 
-        << std::setw(2) << static_cast<int>(r) 
-        << std::setw(2) << static_cast<int>(g) 
-        << std::setw(2) << static_cast<int>(b);
-    return oss.str();
-}
-
-bool Utility::HEXtoRGB(const std::string& hex, uint8_t& out_r, uint8_t& out_g, uint8_t& out_b) {
-    std::string cleanHex = hex;
-    if (cleanHex.size() == 7 && cleanHex[0] == '#') {
-        cleanHex = cleanHex.substr(1);
-    } else if (cleanHex.size() != 6) {
-        return false;
-    }
-
-    try {
-        out_r = static_cast<uint8_t>(std::stoi(cleanHex.substr(0, 2), nullptr, 16));
-        out_g = static_cast<uint8_t>(std::stoi(cleanHex.substr(2, 2), nullptr, 16));
-        out_b = static_cast<uint8_t>(std::stoi(cleanHex.substr(4, 2), nullptr, 16));
-    } catch (...) {
-        return false;
-    }
-
-    return true;
-}
-
 size_t Utility::CountLines(const std::string& str) {
     if (str.empty()) return 0;
 

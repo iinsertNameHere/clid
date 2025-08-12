@@ -1,307 +1,328 @@
 #include "Render.h"
 #include "Input.h"
 #include "Utility.h"
+#include "Color.h"
+
 #include <string>
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <iomanip>
 
-#define VERSION "v0.1.0"
+#define VERSION "v0.1.1"
 
-int X_SIZE = 25;
-int Y_SIZE = 25;
+enum class Format { RGB, HEX, CMYK, HSL };
 
-float hue = 0.0f; // Holds selected hue
-int selectedX = 0; // Holds x cordinate of currently selected shade
-int selectedY = 0; // Holds y cordinate of currently selected shade
-bool runing = true;
+struct AppState {
+    Format format = Format::RGB;
+    int xSize = 25;
+    int ySize = 25;
+    Color::HSL hue = {0.0f, 1.0f, 1.0f};
+    int selectedX = 0;
+    int selectedY = 0;
+    bool running = true;
+};
+AppState state;
 
-void inputHandler(char& key) {
-    switch (key) {
-        case 'k': {
-            hue += 0.01f;
-            if (hue > 1.0f) hue = 1.0f;
-            break;
-        };
-        case 'j': {
-            hue -= 0.01f;
-            if (hue < 0.0f) hue = 0.0f;
-            break;
-        };
-        case 'w': {
-            selectedY -= 1;
-            if (selectedY < 0) selectedY = 0;
-            break;
-        };
-        case 'a': {
-            selectedX -= 1;
-            if (selectedX < 0) selectedX = 0;
-            break;
-        };
-        case 's': {
-            selectedY += 1;
-            if (selectedY > Y_SIZE - 1) selectedY = Y_SIZE - 1;
-            break;
-        };
-        case 'd': {
-            selectedX += 1;
-            if (selectedX > X_SIZE - 1) selectedX = X_SIZE - 1;
-            break;
-        };
-        case 'q': {
-            runing = false;
-            break;
-        };
-        default: break;
-    }
+// -------------------------------------------------------------
+// CLI HELPERS
+// -------------------------------------------------------------
+void printUsage() {
+    std::cout <<
+        "Usage: clid [ARGUMENTS]\n\n"
+        "ARGUMENTS:\n"
+        "    --help          Show this help list.\n"
+        "    --version       Show version number\n"
+        "    --view={color}  Preview a color. (Set format using '--format')\n"
+        "    --size={num}    Number of pixels for width and height.\n"
+        "    --format={str}  Set output format. (Default: 'rgb')\n"
+        "\n"
+        "OUTPUT FORMATS: rgb, hex, cmyk, hsl\n"
+        "\n"
+        "TUI CONTROLS:\n"
+        "    j  Move hue selector up.\n"
+        "    k  Move hue selector down.\n"
+        "    w  Move shade selector up.\n"
+        "    a  Move shade selector left.\n"
+        "    s  Move shade selector down.\n"
+        "    d  Move shade selector right.\n"
+        "    q  Exit\n";
 }
 
-void ViewColor(Render::Pixel& color) {
-    Render::RenderBuffer colorView;
+bool parseFormat(const std::string& str, Format& out) {
+    if (str == "rgb") out = Format::RGB;
+    else if (str == "hex") out = Format::HEX;
+    else if (str == "cmyk") out = Format::CMYK;
+    else if (str == "hsl") out = Format::HSL;
+    else return false;
+    return true;
+}
+
+// -------------------------------------------------------------
+// COLOR INFO GENERATOR
+// -------------------------------------------------------------
+std::string makeColorInfo(const Color::RGB& rgb) {
+    std::ostringstream oss;
+
+    // RGB
+    oss << "RGB: " << (int)rgb.r << " " << (int)rgb.g << " " << (int)rgb.b << "\n";
+
+    // HEX
+    Color::HEX hexColor;
+    Color::RGBtoHEX(hexColor, rgb);
+    oss << "HEX: " << hexColor << "\n";
+
+    // HSL
+    Color::HSL hsl;
+    Color::RGBtoHSL(hsl, rgb);
+    oss << std::fixed << std::setprecision(2);
+    oss << "HSL: " << hsl.h * 100.0f << " " << hsl.s * 100.0f << " " << hsl.l * 100.0f << "\n";
+
+    // CMYK
+    Color::CMYK cmyk;
+    Color::RGBtoCMYK(cmyk, rgb);
+    oss << "CMYK: " << cmyk.c * 100.0f << " " << cmyk.m * 100.0f << " " << cmyk.y * 100.0f << " " << cmyk.k;
+
+    return oss.str();
+}
+
+// -------------------------------------------------------------
+// VIEW MODE
+// -------------------------------------------------------------
+void viewColor(const Color::RGB& color) {
+    Render::RenderBuffer colorView; // 8px height
     colorView.width = 4;
-    colorView.height = 4;
+    colorView.height = 8;
 
     Render::Fill(colorView, color);
 
-    std::string colorviewBuffer;
-    Render::RenderANSIString(colorviewBuffer, colorView);
+    std::string colorViewStr;
+    Render::RenderANSIString(colorViewStr, colorView);
 
-    std::string colorInfo;
-    colorInfo += "RGB: " + std::to_string(color.r) + ", " + std::to_string(color.g) + ", " + std::to_string(color.b) + "\n";
-    colorInfo += "HEX: " + Utility::RGBtoHEX(color.r, color.g, color.b);
+    std::string info = makeColorInfo(color);
 
-    std::string buffer;
-    Utility::ZipStrings(buffer, colorviewBuffer, colorInfo);
-
-    std::cout << buffer << "\n";
+    std::string out;
+    Utility::ZipStrings(out, colorViewStr, info);
+    std::cout << out << "\n";
 }
 
-void usage() {
-    std::cout << "Usage: clid [ARGUMENTS]\n\n";
-    std::cout << "ARGUMENTS:\n";
-    std::cout << "    --help        Show this help list.\n";
-    std::cout << "    --version     Show version number\n";
-    std::cout << "    --rgb={rgb}   View a color in rgb format.\n";
-    std::cout << "    --hex={hex}   View a color in hex format.\n";
-    std::cout << "    --size={num}  Number of pixels for width and hight.\n";
-    std::cout << "    --output-hex  Set output format to be hex instead of rgb.\n";
-    std::cout << "\n";
-    std::cout << "TUI CONTROLLS:\n";
-    std::cout << "    j  Move hue selector up.\n";
-    std::cout << "    k  Move hue selector down.\n";
-    std::cout << "    w  Move shade selector up.\n";
-    std::cout << "    a  Move shade selector left.\n";
-    std::cout << "    s  Move shade selector down.\n";
-    std::cout << "    d  Move shade selector right.\n";
-    std::cout << "    q  Exit\n";
+// -------------------------------------------------------------
+// INPUT HANDLER
+// -------------------------------------------------------------
+void handleInput(char& key) {
+    switch (key) {
+        case 'k': state.hue.h = std::min(1.0f, state.hue.h + 0.01f); break;
+        case 'j': state.hue.h = std::max(0.0f, state.hue.h - 0.01f); break;
+        case 'w': state.selectedY = std::max(0, state.selectedY - 1); break;
+        case 'a': state.selectedX = std::max(0, state.selectedX - 1); break;
+        case 's': state.selectedY = std::min(state.ySize - 1, state.selectedY + 1); break;
+        case 'd': state.selectedX = std::min(state.xSize - 1, state.selectedX + 1); break;
+        case 'q': state.running = false; break;
+    }
 }
 
+// -------------------------------------------------------------
+// DRAW LOOP
+// -------------------------------------------------------------
+void drawUI() {
+    Render::RenderBuffer shademap;
+    shademap.width = state.xSize;
+    shademap.height = state.ySize;
+
+    Render::RenderBuffer huemap;
+    huemap.width = 4;
+    huemap.height = state.ySize;
+
+    Render::RenderBuffer colordisplay;
+    colordisplay.width = 4;
+    colordisplay.height = 8;
+
+    Render::GenerateShadeMap(shademap, state.hue.h);
+    Render::GenerateHueMap(huemap);
+
+    Color::RGB selectedColor = shademap.pixelMatrix[state.selectedY][state.selectedX];
+    Render::Fill(colordisplay, selectedColor);
+
+    // Highlight hue
+    size_t l = 0;
+    bool highlighted = false;
+    while (l < huemap.height - 1) {
+        Color::HSL h1, h2;
+        Color::RGBtoHSL(h1, huemap.pixelMatrix[l][0]);
+        Color::RGBtoHSL(h2, huemap.pixelMatrix[l + 1][0]);
+        if ((state.hue.h >= h1.h && state.hue.h <= h2.h) ||
+            (state.hue.h >= h2.h && state.hue.h <= h1.h)) {
+            std::vector<Render::Pixel> row(huemap.width);
+            for (auto& px : row) Color::HSLtoRGB(px, {h1.h, 0.4f, 0.4f});
+            huemap.pixelMatrix[l] = row;
+            highlighted = true;
+            break;
+        }
+        ++l;
+    }
+    if (!highlighted) {
+        Color::HSL lastHue;
+        Color::RGBtoHSL(lastHue, huemap.pixelMatrix.back()[0]);
+        std::vector<Render::Pixel> row(huemap.width);
+        for (auto& px : row) Color::HSLtoRGB(px, {lastHue.h, 0.3f, 0.3f});
+        huemap.pixelMatrix.back() = row;
+    }
+
+    // Highlight selected shade
+    {
+        Color::RGB current = shademap.pixelMatrix[state.selectedY][state.selectedX];
+
+        Color::RGB inverted = {
+            static_cast<uint8_t>(255 - current.r),
+            static_cast<uint8_t>(255 - current.g),
+            static_cast<uint8_t>(255 - current.b)
+        };
+
+        shademap.pixelMatrix[state.selectedY][state.selectedX] = inverted;
+    }
+
+    // Convert to strings
+    std::string shademapStr, huemapStr, colordisplayStr;
+    Render::RenderANSIString(shademapStr, shademap);
+    Render::RenderANSIString(huemapStr, huemap);
+    Render::RenderANSIString(colordisplayStr, colordisplay);
+
+    std::string info = makeColorInfo(selectedColor);
+
+    std::string colorInfoBuffer;
+    Utility::ZipStrings(colorInfoBuffer, colordisplayStr, info);
+
+    std::string display;
+    Utility::ZipStrings(display, shademapStr, huemapStr);
+    display += "\n" + colorInfoBuffer;
+
+    std::cout << "\n" << display << std::endl;
+
+    // Move cursor up to overwrite
+    size_t lines = Utility::CountLines(display) + 1;
+    std::cout << "\r\033[" + std::to_string(lines) + "A";
+}
+
+// -------------------------------------------------------------
+// MAIN
+// -------------------------------------------------------------
 int main(int argc, char* argv[]) {
     auto args = Utility::ParseArgs(argc, argv);
 
-    bool viewColor = false;
-    Render::Pixel viewColor_Color = {0, 0, 0};
-
-    bool hexOutput = false;
-
-    if (args.count("help")) {
-        usage();
-        return 0;
-    }
-    if (args.count("version")) {
-        std::cout << "Version: clid " << VERSION << "\n";
-        return 0;
-    }
-    if (args.count("output-hex")) hexOutput = true;
-    if (args.count("rgb")) {
-        if (viewColor) {
-            std::cerr << "Argument --rgb can't be used together with --hex!\n";
-            usage();
+    // CLI handling
+    if (args.count("help")) { printUsage(); return 0; }
+    if (args.count("version")) { std::cout << "Version: clid " << VERSION << "\n"; return 0; }
+    if (args.count("format")) {
+        if (!parseFormat(args["format"], state.format)) {
+            std::cerr << "Invalid format for --format!\n";
+            printUsage();
             return 1;
         }
-
-        if (args["rgb"] == "") {
-            std::cerr << "No value provied for --rgb!\n";
-            usage();
-            return 1;
-        }
-        std::vector<std::string> values = Utility::Split(args["rgb"], ',');
-        if (values.size() != 3) {
-            std::cerr << "Value provied for --rgb has the wrong format! \n";
-            std::cerr << "Correct Format: {num},{num},{num}\n";
-            usage();
-            return 1;
-        }
-        uint8_t r, g, b;
-        if (
-            !Utility::StringToUint8(values[0], r) ||
-            !Utility::StringToUint8(values[1], g) ||
-            !Utility::StringToUint8(values[2], b)
-        ) {
-            std::cerr << "Value provied for --rgb has the wrong format! \n";
-            std::cerr << "Correct Format: {num},{num},{num}\n";
-            usage();
-            return 1;
-        }
-
-        viewColor_Color = {r, g, b};
-        viewColor = true;
-    }
-    if (args.count("hex")) {
-        if (viewColor) {
-            std::cerr << "Argument --hex can't be used together with --rgb!\n";
-            usage();
-            return 1;
-        }
-
-        if (args["hex"] == "") {
-            std::cerr << "No value provied for --hex!\n";
-            usage();
-            return 1;
-        }
-
-        uint8_t r, g, b;
-
-        if (!Utility::HEXtoRGB(args["hex"], r, g, b)) {
-            std::cerr << "Value provied for --hex has the wrong format! \n";
-            std::cerr << "Correct Format: #{hexnum}\n";
-            usage();
-            return 1;
-        }
-
-        viewColor_Color = {r, g, b};
-        viewColor = true;
     }
     if (args.count("size")) {
-        if (viewColor) {
-            std::cerr << "Argument --size can't be used together with --rgb or --hex!\n";
-            usage();
-            return 1;
-        }
-
-        if (args["size"] == "") {
-            std::cerr << "No value provied for --size!\n";
-            usage();
-            return 1;
-        }
-
-        int size = std::stoi(args["size"]);
-        X_SIZE = size;
-        Y_SIZE = size;
+        state.xSize = state.ySize = std::stoi(args["size"]);
     }
 
-    if (viewColor) {
-        ViewColor(viewColor_Color);
+    // View mode
+    if (args.count("view")) {
+        Color::RGB rgb;
+        switch (state.format) {
+            case Format::RGB: {
+                auto values = Utility::Split(args["view"], ',');
+                if (values.size() != 3 ||
+                    !Utility::StringToUint8(values[0], rgb.r) ||
+                    !Utility::StringToUint8(values[1], rgb.g) ||
+                    !Utility::StringToUint8(values[2], rgb.b)) {
+                    std::cerr << "Invalid RGB value for --view!\n";
+                    return 1;
+                }
+                break;
+            }
+            case Format::HEX:
+                if (!Color::HEXtoRGB(rgb, args["view"])) {
+                    std::cerr << "Invalid HEX value for --view!\n";
+                    return 1;
+                }
+                break;
+            case Format::HSL: {
+                auto values = Utility::Split(args["view"], ',');
+                if (values.size() != 3) {
+                    std::cerr << "Invalid HSL value for --view!\n";
+                    return 1;
+                }
+                Color::HSL hsl;
+                hsl.h = std::stof(values[0]) / 100.0f;
+                hsl.s = std::stof(values[1]) / 100.0f;
+                hsl.l = std::stof(values[2]) / 100.0f;
+                Color::HSLtoRGB(rgb, hsl);
+                break;
+            }
+            case Format::CMYK: {
+                auto values = Utility::Split(args["view"], ',');
+                if (values.size() != 4) {
+                    std::cerr << "Invalid CMYK value for --view!\n";
+                    return 1;
+                }
+                Color::CMYK cmyk;
+                cmyk.c = std::stof(values[0]) / 100.0f;
+                cmyk.m = std::stof(values[1]) / 100.0f;
+                cmyk.y = std::stof(values[2]) / 100.0f;
+                cmyk.k = std::stof(values[3]) / 100.0f;
+                Color::CMYKtoRGB(rgb, cmyk);
+                break;
+            }
+        }
+        viewColor(rgb);
         return 0;
     }
 
+    // Interactive mode
     Input::Manager inputManager;
-    inputManager.addEvent('k', inputHandler);
-    inputManager.addEvent('j', inputHandler);
-    inputManager.addEvent('q', inputHandler);
-    inputManager.addEvent('w', inputHandler);
-    inputManager.addEvent('a', inputHandler);
-    inputManager.addEvent('s', inputHandler);
-    inputManager.addEvent('d', inputHandler);
+    for (char c : {'k','j','q','w','a','s','d'})
+        inputManager.addEvent(c, handleInput);
 
-    std::string displayBuffer;
+    Color::RGB finalColor;
 
-    std::string shademapBuffer;
-    Render::RenderBuffer shademap;
-    shademap.height = Y_SIZE;
-    shademap.width = X_SIZE;
-
-    std::string huemapBuffer;
-    Render::RenderBuffer huemap;
-    huemap.height = Y_SIZE;
-    huemap.width = 4;
-
-    Render::Pixel selectedColor;
-    std::string colordisplayBuffer;
-    Render::RenderBuffer colordisplay;
-    colordisplay.width = 4;
-    colordisplay.height = 4;
-
-    while (runing) {
-        displayBuffer = "";
-
-        shademapBuffer = "";
-        shademap.pixelMatrix.clear();
-
-        huemapBuffer = "";
-        huemap.pixelMatrix.clear();
-
-        colordisplayBuffer = "";
-        colordisplay.pixelMatrix.clear();
-
-        Render::GenerateShadeMap(shademap, hue);
-        Render::GenerateHueMap(huemap);
-
-        selectedColor = shademap.pixelMatrix[selectedY][selectedX];
-        Render::Fill(colordisplay, selectedColor);
-
-        shademap.pixelMatrix[selectedY][selectedX] = Render::HSLtoRGB(hue + 0.1f, 0.8f, 0.8f);
-
-        size_t l = 0;
-        bool highlighted = false;
-        while (l < huemap.height - 1) {
-            float hue1 = Render::RGBtoHSL(huemap.pixelMatrix[l][0]).h;
-            float hue2 = Render::RGBtoHSL(huemap.pixelMatrix[l + 1][0]).h;
-
-            if ((hue >= hue1 && hue <= hue2) || (hue >= hue2 && hue <= hue1)) {
-                std::vector<Render::Pixel> selectedRow;
-                for (size_t i = 0; i < huemap.width; i++) {
-                    selectedRow.push_back(Render::HSLtoRGB(hue1, 0.4f, 0.4f));
-                }
-                huemap.pixelMatrix[l] = selectedRow;
-                highlighted = true;
-                break;
-            }
-            ++l;
-        }
-
-        if (!highlighted) {
-            // Check the last line alone:
-            float lastHue = Render::RGBtoHSL(huemap.pixelMatrix[huemap.height - 1][0]).h;
-            // Optionally check if hue is close enough to lastHue or just highlight anyway
-            if (true) { // or some condition on hue vs lastHue
-                std::vector<Render::Pixel> selectedRow;
-                for (size_t i = 0; i < huemap.width; i++) {
-                    selectedRow.push_back(Render::HSLtoRGB(lastHue, 0.3f, 0.3f));
-                }
-                huemap.pixelMatrix[huemap.height - 1] = selectedRow;
-            }
-        }
-        
-        Render::RenderANSIString(shademapBuffer, shademap);
-        Render::RenderANSIString(huemapBuffer, huemap);
-        Render::RenderANSIString(colordisplayBuffer, colordisplay);
-
-        std::string colorInfo;
-        colorInfo += "RGB: " + std::to_string(selectedColor.r) + " " + std::to_string(selectedColor.g) + " " + std::to_string(selectedColor.b) + "\n";
-        colorInfo += "HEX: " + Utility::RGBtoHEX(selectedColor.r, selectedColor.g, selectedColor.b);
-
-        std::string selectedColorInfoBuffer;
-        Utility::ZipStrings(selectedColorInfoBuffer, colordisplayBuffer, colorInfo);
-
-        Utility::ZipStrings(displayBuffer, shademapBuffer, huemapBuffer);
-        displayBuffer += "\n" + selectedColorInfoBuffer;
-        
-        std::cout << "\n" << displayBuffer << std::endl;
-
-        size_t lines = Utility::CountLines(displayBuffer) + 1;
-        std::cout << "\r\033[" + std::to_string(lines) + "A";
-
+    while (state.running) {
+        drawUI();
+        finalColor = Render::GetShadeColor(state.xSize, state.ySize, state.hue.h, state.selectedX, state.selectedY);
         inputManager.update();
     }
-    
-    size_t lines = Utility::CountLines(displayBuffer) + 1;
-    for (size_t l = 0; l < lines; l++) {
-        for (int i = 0; i < X_SIZE + 5; i++) std::cout << " ";
-        std::cout << "\n";
-    }
-    std::cout << "\r\033[" + std::to_string(lines) + "A" << "\n";
 
-    if (!hexOutput) std::cout << std::to_string(selectedColor.r) << " " << std::to_string(selectedColor.g) << " " << std::to_string(selectedColor.b) << "\n";
-    else std::cout << Utility::RGBtoHEX(selectedColor.r, selectedColor.g, selectedColor.b) << "\n";
+    size_t lines = state.ySize;
+    std::string cleanLine(state.xSize + 8, ' ');
+
+    // Overwrite all lines
+    for (size_t l = 0; l < lines; l++) {
+        std::cout << "\r" << cleanLine << "\r";
+        if (l < lines - 1) std::cout << "\n";
+    }
+
+    // Move cursor back up to the top of cleared area
+    std::cout << "\033[" << lines << "A" << "\n";
+
+    // Final output based on format
+    switch (state.format) {
+        case Format::RGB:
+            std::cout << (int)finalColor.r << "," << (int)finalColor.g << "," << (int)finalColor.b << "\n";
+            break;
+        case Format::HEX: {
+            Color::HEX hexColor;
+            Color::RGBtoHEX(hexColor, finalColor);
+            std::cout << hexColor << "\n";
+            break;
+        }
+        case Format::HSL: {
+            Color::HSL hsl;
+            Color::RGBtoHSL(hsl, finalColor);
+            std::cout << hsl.h * 100.0f << "," << hsl.s * 100.0f << "," << hsl.l * 100.0f << "\n";
+            break;
+        }
+        case Format::CMYK: {
+            Color::CMYK cmyk;
+            Color::RGBtoCMYK(cmyk, finalColor);
+            std::cout << cmyk.c * 100.0f << "," << cmyk.m * 100.0f << "," << cmyk.y * 100.0f << "," << cmyk.k * 100.0f << "\n";
+            break;
+        }
+    }
 }
