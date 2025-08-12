@@ -1,4 +1,4 @@
-#include "PPM.h"
+#include "Render.h"
 #include "Input.h"
 #include "Utility.h"
 #include <string>
@@ -11,10 +11,11 @@
 int X_SIZE = 25;
 int Y_SIZE = 25;
 
-float hue = 0.0f;
-int selectedX = 0;
-int selectedY = 0;
+float hue = 0.0f; // Holds selected hue
+int selectedX = 0; // Holds x cordinate of currently selected shade
+int selectedY = 0; // Holds y cordinate of currently selected shade
 bool runing = true;
+
 void inputHandler(char& key) {
     switch (key) {
         case 'k': {
@@ -55,15 +56,15 @@ void inputHandler(char& key) {
     }
 }
 
-void ViewColor(PPM::Pixel& color) {
-    PPM::Image colorView;
+void ViewColor(Render::Pixel& color) {
+    Render::RenderBuffer colorView;
     colorView.width = 4;
     colorView.height = 4;
 
-    PPM::Fill(colorView, color);
+    Render::Fill(colorView, color);
 
     std::string colorviewBuffer;
-    PPM::ToString(colorviewBuffer, colorView);
+    Render::RenderANSIString(colorviewBuffer, colorView);
 
     std::string colorInfo;
     colorInfo += "RGB: " + std::to_string(color.r) + ", " + std::to_string(color.g) + ", " + std::to_string(color.b) + "\n";
@@ -99,7 +100,7 @@ int main(int argc, char* argv[]) {
     auto args = Utility::ParseArgs(argc, argv);
 
     bool viewColor = false;
-    PPM::Pixel viewColor_Color = {0, 0, 0};
+    Render::Pixel viewColor_Color = {0, 0, 0};
 
     bool hexOutput = false;
 
@@ -206,18 +207,18 @@ int main(int argc, char* argv[]) {
     std::string displayBuffer;
 
     std::string shademapBuffer;
-    PPM::Image shademap;
+    Render::RenderBuffer shademap;
     shademap.height = Y_SIZE;
     shademap.width = X_SIZE;
 
     std::string huemapBuffer;
-    PPM::Image huemap;
+    Render::RenderBuffer huemap;
     huemap.height = Y_SIZE;
     huemap.width = 4;
 
-    PPM::Pixel selectedColor;
+    Render::Pixel selectedColor;
     std::string colordisplayBuffer;
-    PPM::Image colordisplay;
+    Render::RenderBuffer colordisplay;
     colordisplay.width = 4;
     colordisplay.height = 4;
 
@@ -233,24 +234,24 @@ int main(int argc, char* argv[]) {
         colordisplayBuffer = "";
         colordisplay.pixelMatrix.clear();
 
-        PPM::GenerateShadeMap(shademap, hue);
-        PPM::GenerateHueMap(huemap);
+        Render::GenerateShadeMap(shademap, hue);
+        Render::GenerateHueMap(huemap);
 
         selectedColor = shademap.pixelMatrix[selectedY][selectedX];
-        PPM::Fill(colordisplay, selectedColor);
+        Render::Fill(colordisplay, selectedColor);
 
-        shademap.pixelMatrix[selectedY][selectedX] = PPM::HSLtoRGB(hue + 0.1f, 0.8f, 0.8f);
+        shademap.pixelMatrix[selectedY][selectedX] = Render::HSLtoRGB(hue + 0.1f, 0.8f, 0.8f);
 
         size_t l = 0;
         bool highlighted = false;
         while (l < huemap.height - 1) {
-            float hue1 = PPM::RGBtoHSL(huemap.pixelMatrix[l][0]).h;
-            float hue2 = PPM::RGBtoHSL(huemap.pixelMatrix[l + 1][0]).h;
+            float hue1 = Render::RGBtoHSL(huemap.pixelMatrix[l][0]).h;
+            float hue2 = Render::RGBtoHSL(huemap.pixelMatrix[l + 1][0]).h;
 
             if ((hue >= hue1 && hue <= hue2) || (hue >= hue2 && hue <= hue1)) {
-                std::vector<PPM::Pixel> selectedRow;
+                std::vector<Render::Pixel> selectedRow;
                 for (size_t i = 0; i < huemap.width; i++) {
-                    selectedRow.push_back(PPM::HSLtoRGB(hue1, 0.4f, 0.4f));
+                    selectedRow.push_back(Render::HSLtoRGB(hue1, 0.4f, 0.4f));
                 }
                 huemap.pixelMatrix[l] = selectedRow;
                 highlighted = true;
@@ -261,20 +262,20 @@ int main(int argc, char* argv[]) {
 
         if (!highlighted) {
             // Check the last line alone:
-            float lastHue = PPM::RGBtoHSL(huemap.pixelMatrix[huemap.height - 1][0]).h;
+            float lastHue = Render::RGBtoHSL(huemap.pixelMatrix[huemap.height - 1][0]).h;
             // Optionally check if hue is close enough to lastHue or just highlight anyway
             if (true) { // or some condition on hue vs lastHue
-                std::vector<PPM::Pixel> selectedRow;
+                std::vector<Render::Pixel> selectedRow;
                 for (size_t i = 0; i < huemap.width; i++) {
-                    selectedRow.push_back(PPM::HSLtoRGB(lastHue, 0.3f, 0.3f));
+                    selectedRow.push_back(Render::HSLtoRGB(lastHue, 0.3f, 0.3f));
                 }
                 huemap.pixelMatrix[huemap.height - 1] = selectedRow;
             }
         }
-
-        PPM::ToString(shademapBuffer, shademap);
-        PPM::ToString(huemapBuffer, huemap);
-        PPM::ToString(colordisplayBuffer, colordisplay);
+        
+        Render::RenderANSIString(shademapBuffer, shademap);
+        Render::RenderANSIString(huemapBuffer, huemap);
+        Render::RenderANSIString(colordisplayBuffer, colordisplay);
 
         std::string colorInfo;
         colorInfo += "RGB: " + std::to_string(selectedColor.r) + " " + std::to_string(selectedColor.g) + " " + std::to_string(selectedColor.b) + "\n";

@@ -4,7 +4,7 @@
 #include <string>
 #include <cstdint>
 
-namespace PPM {
+namespace Render {
     struct Pixel {
         uint8_t r;
         uint8_t g;
@@ -21,41 +21,35 @@ namespace PPM {
         float l;
     };
 
-    struct Image {
+    struct RenderBuffer {
         size_t width;
         size_t height;
         std::vector<std::vector<Pixel>> pixelMatrix;
     };
 
-    /** Helper function to calculate size values from pixelMatrix. */
-    void CalcImageSize(Image& image);
+    /** Helper function to calculate RenderBuffer width and height values from pixelMatrix. */
+    void CalcSize(RenderBuffer& rb);
 
-    /** Fill the whole pixelMatrix with a specific color. */
-    void Fill(Image& image, const Pixel pixel);
+    /** Fill the whole RenderBuffer.pixelMatrix with a specific color. */
+    void Fill(RenderBuffer& rb, const Pixel pixel);
 
     /** Convert HSL color to an RGB Pixel. */
     Pixel HSLtoRGB(float h, float s, float l);
 
-    /** Convert PPM::Pixel to HSL values. */
+    /** Convert Pixel to HSL values. */
     HSL RGBtoHSL(const Pixel& px);
 
     /** Generate a map that holds diferent Shades of a given hue. */
-    bool GenerateShadeMap(Image& image, float hue);
+    bool GenerateShadeMap(RenderBuffer& rb, float hue);
 
     /** Generates a map that holds all hues in the RGB color spectrum. */
-    bool GenerateHueMap(Image& image);
+    bool GenerateHueMap(RenderBuffer& rb);
 
-    /** Converts a PPM::Pixel to an ansi color code. */
+    /** Converts a Pixel to an ansi color code. */
     std::string PixelToANSI(Pixel& p, bool fg = true);
 
-    /** Reads a .ppm file and populates the provided PPM::Image object with its data. */
-    bool Read(const std::string& filename, Image& image);
-
-    /** Writes a PPM::Image object to a .ppm file */
-    bool Write(const std::string& filename, Image& image);
-
-    /** Converts and outputs a PPM::Image object into
+    /** Converts and outputs a RenderBuffer object into
     a std::string buffer by rendering pixels as ascii characters with RGB ansi color. */
-    void ToString(std::string& buffer, Image& image);
+    void RenderANSIString(std::string& buffer, RenderBuffer& rb);
 
 }
