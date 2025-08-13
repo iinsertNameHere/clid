@@ -29,7 +29,7 @@ $ ./clid --format=hex | tee /dev/tty | tail -n 1 | wl-copy
 $ clid --help
 ```
 
-## Build
+## Build & Install
 ```shell
 # Clone clid repo
 $ git clone https://github.com/iinsertNameHere/clid.git
@@ -38,8 +38,16 @@ $ cd clid
 # Build using make
 $ make
 
+# Install using make
+$ make install
+
 # Run program
-$ ./build/clid
+$ clid
+```
+
+#### Uninstall:
+```shell
+$ make uninstall
 ```
 
 ## Showcase
