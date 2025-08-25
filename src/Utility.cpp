@@ -40,17 +40,24 @@ std::unordered_map<std::string, std::string> Utility::ParseArgs(int argc, char* 
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
+        size_t prefixLen = 0;
 
         if (arg.rfind("--", 0) == 0) {  // starts with "--"
+            prefixLen = 2;
+        } else if (arg.rfind("-", 0) == 0) { // starts with "-"
+            prefixLen = 1;
+        }
+
+        if (prefixLen > 0) {
             size_t eqPos = arg.find('=');
             if (eqPos != std::string::npos) {
                 // Format: --key=value
-                std::string key = arg.substr(2, eqPos - 2);
+                std::string key = arg.substr(prefixLen, eqPos - prefixLen);
                 std::string value = arg.substr(eqPos + 1);
                 args[key] = value;
             } else {
                 // Flag without value
-                std::string key = arg.substr(2);
+                std::string key = arg.substr(prefixLen);
                 args[key] = "";  // empty value
             }
         }
@@ -82,4 +89,12 @@ bool Utility::StringToUint8(const std::string& str, uint8_t& out) {
     } catch (const std::exception& e) {
         return false;
     }
+}
+
+void Utility::CursorDown(std::ostream& stream, size_t lines) {
+    stream << "\033[" << lines << "B";
+}
+
+void Utility::CursorPos(std::ostream& stream, size_t row, size_t col) {
+    stream << "\033[" << row << ";" << col << "H";
 }
