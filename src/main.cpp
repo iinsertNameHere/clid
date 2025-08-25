@@ -21,6 +21,7 @@ struct AppState {
     int selectedX = 0;
     int selectedY = 0;
     bool running = true;
+    bool wipeScreen = true;
 };
 AppState state;
 
@@ -31,11 +32,24 @@ void printUsage() {
     std::cout <<
         "Usage: clid [ARGUMENTS]\n\n"
         "ARGUMENTS:\n"
-        "    --help          Show this help list.\n"
-        "    --version       Show version number\n"
-        "    --view={color}  Preview a color. (Set format using '--format')\n"
-        "    --size={num}    Number of pixels for width and height.\n"
-        "    --format={str}  Set output format. (Default: 'rgb')\n"
+        "    -h, --help          Show this help list.\n"
+        "    -V, --version       Show version number\n"
+        "    -v, --view={color}  Preview a color. (Set format using '--format')\n"
+        "    -s, --size={num}    Number of pixels for width and height.\n"
+        "    -f, --format={str}  Set output format. (Default: 'rgb')\n"
+        "    -W, --no-wipe       Leave color picker displayed at exit\n"
+        "\n"
+        "Example runs:\n"
+        "  Run clid in normal mode; choose a color and receive it on stdout on quit\n"
+        "    $ clid\n"
+        "  Same as before but output in cmyk format\n"
+        "    $ clid --format=cmyk\n"
+        "  Pipe the output of clid into the clipboard\n"
+        "    $ ./clid --format=hex | wl-copy            # For wayland\n"
+        "    $ ./clid --format=hex | xsel -i -b         # For X11\n"
+        "    $ ./clid --format=hex | xclip -i -sel clip # For X11\n"
+        "  Capture output into a variable\n"
+        "    $ color=$(./clid)     # Can add options like (./clid -W)\n"
         "\n"
         "OUTPUT FORMATS: rgb, hex, cmyk, hsl\n"
         "\n"
@@ -103,7 +117,7 @@ void viewColor(const Color::RGB& color) {
 
     std::string out;
     Utility::ZipStrings(out, colorViewStr, info);
-    std::cout << out << "\n";
+    std::cerr << out << "\n";
 }
 
 // -------------------------------------------------------------
@@ -117,14 +131,17 @@ void handleInput(char& key) {
         case 'a': state.selectedX = std::max(0, state.selectedX - 1); break;
         case 's': state.selectedY = std::min(state.ySize - 1, state.selectedY + 1); break;
         case 'd': state.selectedX = std::min(state.xSize - 1, state.selectedX + 1); break;
-        case 'q': state.running = false; break;
+        case 'q':
+        case '\n':
+            state.running = false; 
+            break;
     }
 }
 
 // -------------------------------------------------------------
 // DRAW LOOP
 // -------------------------------------------------------------
-void drawUI() {
+std::string drawUI() {
     Render::RenderBuffer shademap;
     shademap.width = state.xSize;
     shademap.height = state.ySize;
@@ -195,12 +212,14 @@ void drawUI() {
     std::string display;
     Utility::ZipStrings(display, shademapStr, huemapStr);
     display += "\n" + colorInfoBuffer;
+    display += "\n\033[38;2;128;128;128m(jk) Hue, (ws) Brightness, (ad) Saturation, (q/ENTER) Done\033[0m";
 
-    std::cout << "\n" << display << std::endl;
+    std::cerr << display << std::endl;
 
     // Move cursor up to overwrite
-    size_t lines = Utility::CountLines(display) + 1;
-    std::cout << "\r\033[" + std::to_string(lines) + "A";
+    size_t lines = Utility::CountLines(display);
+    std::cerr << "\r\033[" + std::to_string(lines) + "A";
+    return display;
 }
 
 // -------------------------------------------------------------
@@ -209,26 +228,51 @@ void drawUI() {
 int main(int argc, char* argv[]) {
     auto args = Utility::ParseArgs(argc, argv);
 
+    const std::vector<std::string> acceptedArgs = {"help", "h", "version", "V", "format", "f", "size", "s", "view", "v", "no-wipe", "W"};
+
+    // Check for unknown arguments
+    for (const auto& arg : args) {
+        bool found = false;
+        for (const auto& accepted : acceptedArgs) {
+            if (arg.first == accepted) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            std::cerr << "Error: Unknown argument '" << arg.first << "'\n";
+            printUsage();
+            return 1;
+        }
+    }
+
     // CLI handling
-    if (args.count("help")) { printUsage(); return 0; }
-    if (args.count("version")) { std::cout << "Version: clid " << VERSION << "\n"; return 0; }
-    if (args.count("format")) {
-        if (!parseFormat(args["format"], state.format)) {
+    if (args.count("help") || args.count("h")) { printUsage(); return 0; }
+    if (args.count("version") || args.count("V")) { std::cout << "Version: clid " << VERSION << "\n"; return 0; }
+    if (args.count("format") || args.count("f")) {
+        std::string formatStr = args.count("format") ? args["format"] : args["f"];
+        if (!parseFormat(formatStr, state.format)) {
             std::cerr << "Invalid format for --format!\n";
             printUsage();
             return 1;
         }
     }
-    if (args.count("size")) {
-        state.xSize = state.ySize = std::stoi(args["size"]);
+    if (args.count("size") || args.count("s")) {
+        std::string sizeStr = args.count("size") ? args["size"] : args["s"];
+        state.xSize = state.ySize = std::stoi(sizeStr);
+    }
+
+    if (args.count("no-wipe") || args.count("W")) {
+        state.wipeScreen = false;
     }
 
     // View mode
-    if (args.count("view")) {
+    if (args.count("view") || args.count("v")) {
+        std::string viewStr = args.count("view") ? args["view"] : args["v"];
         Color::RGB rgb;
         switch (state.format) {
             case Format::RGB: {
-                auto values = Utility::Split(args["view"], ',');
+                auto values = Utility::Split(viewStr, ',');
                 if (values.size() != 3 ||
                     !Utility::StringToUint8(values[0], rgb.r) ||
                     !Utility::StringToUint8(values[1], rgb.g) ||
@@ -239,13 +283,13 @@ int main(int argc, char* argv[]) {
                 break;
             }
             case Format::HEX:
-                if (!Color::HEXtoRGB(rgb, args["view"])) {
+                if (!Color::HEXtoRGB(rgb, viewStr)) {
                     std::cerr << "Invalid HEX value for --view!\n";
                     return 1;
                 }
                 break;
             case Format::HSL: {
-                auto values = Utility::Split(args["view"], ',');
+                auto values = Utility::Split(viewStr, ',');
                 if (values.size() != 3) {
                     std::cerr << "Invalid HSL value for --view!\n";
                     return 1;
@@ -258,7 +302,7 @@ int main(int argc, char* argv[]) {
                 break;
             }
             case Format::CMYK: {
-                auto values = Utility::Split(args["view"], ',');
+                auto values = Utility::Split(viewStr, ',');
                 if (values.size() != 4) {
                     std::cerr << "Invalid CMYK value for --view!\n";
                     return 1;
@@ -278,28 +322,33 @@ int main(int argc, char* argv[]) {
 
     // Interactive mode
     Input::Manager inputManager;
-    for (char c : {'k','j','q','w','a','s','d'})
+    for (char c : {'k','j','q','w','a','s','d','\n'})
         inputManager.addEvent(c, handleInput);
 
     Color::RGB finalColor;
+    std::string display;
 
     while (state.running) {
-        drawUI();
+        display = drawUI();
         finalColor = Render::GetShadeColor(state.xSize, state.ySize, state.hue.h, state.selectedX, state.selectedY);
         inputManager.update();
     }
 
-    size_t lines = state.ySize;
-    std::string cleanLine(state.xSize + 8, ' ');
+    if (state.wipeScreen) {
+        size_t lines = Utility::CountLines(display);
 
-    // Overwrite all lines
-    for (size_t l = 0; l < lines; l++) {
-        std::cout << "\r" << cleanLine << "\r";
-        if (l < lines - 1) std::cout << "\n";
+        // Overwrite all lines
+        for (size_t l = 0; l < lines; l++) {
+            std::cerr << "\r\033[2K";
+            if (l < lines - 1) std::cerr << "\n";
+        }
+
+        // Move cursor back up to the top of cleared area
+        std::cerr << "\033[" << lines << "A" << "\n";
+    } else {
+        size_t lines = Utility::CountLines(display);
+        Utility::CursorDown(std::cerr, lines);
     }
-
-    // Move cursor back up to the top of cleared area
-    std::cout << "\033[" << lines << "A" << "\n";
 
     // Final output based on format
     switch (state.format) {
