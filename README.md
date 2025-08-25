@@ -22,8 +22,14 @@ $ clid
 # Same as before but output in cmyk format.
 $ clid --format=cmyk
 
-# This is an example how to pipe the output of clid into wl-copy
-$ ./clid --format=hex | tee /dev/tty | tail -n 1 | wl-copy
+# You can pipe the output into your clipboard:
+$ ./clid --format=hex | wl-copy            # For Weyland
+$ ./clid --format=hex | xsel -i -b         # For X11
+$ ./clid --format=hex | xclip -i -sel clip # For X11
+
+# Or capture it in a variable (you can add options here as well, like ./clid -W):
+$ color=$(./clid)             # Preferred.
+$ read -r color < <(./clid)   # Works in bash, ksh, zsh, ..., but **not sh**
 
 # Use --help to get a list of all arguments and view tui inputs.
 $ clid --help
