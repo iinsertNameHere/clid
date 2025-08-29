@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include <vector>
+#include <iostream>
 
 namespace Utility {
 
@@ -12,6 +13,12 @@ namespace Utility {
 
     /** Count howmany lines a string has. */
     size_t CountLines(const std::string& str);
+
+    /** Move the cursor down n lines */
+    void CursorDown(std::ostream& stream, size_t lines);
+
+    /** Move the cursor to a specific row and column. */
+    void CursorPos(std::ostream& stream, size_t row, size_t col);
 
     /** Parse commandline arguments to be easyer to handle */
     std::unordered_map<std::string, std::string> ParseArgs(int argc, char* argv[]);
