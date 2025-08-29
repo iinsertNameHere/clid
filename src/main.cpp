@@ -9,7 +9,7 @@
 #include <vector>
 #include <iomanip>
 
-#define VERSION "v1.0.0"
+#define VERSION "v1.1.0"
 
 enum class Format { RGB, HEX, CMYK, HSL };
 
@@ -214,10 +214,10 @@ std::string drawUI() {
     display += "\n" + colorInfoBuffer;
     display += "\n\033[38;2;128;128;128m(jk) Hue, (ws) Brightness, (ad) Saturation, (q/ENTER) Done\033[0m";
 
-    std::cerr << display << std::endl;
+    std::cerr << "\n" << display << std::endl;
 
     // Move cursor up to overwrite
-    size_t lines = Utility::CountLines(display);
+    size_t lines = Utility::CountLines(display) + 1;
     std::cerr << "\r\033[" + std::to_string(lines) + "A";
     return display;
 }
@@ -335,7 +335,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (state.wipeScreen) {
-        size_t lines = Utility::CountLines(display);
+        size_t lines = Utility::CountLines(display) + 1;
 
         // Overwrite all lines
         for (size_t l = 0; l < lines; l++) {
