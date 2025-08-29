@@ -3,12 +3,12 @@
     <h1>clid - Command line Color Picker</h1>
 </div>
 
-`clid` allows you to view, choose and convert colors in RGB and HEX formats using a simple tui.
+`clid` allows you to view, choose and convert colors in RGB, HEX, HSL and CMYK formats using a simple tui.
 
 ## Features
 - No external librarys needed.
 - TUI Coose color dialog.
-- View RGB and HEX colors.
+- View colors in your terminal.
 - Change TUI scaling.
 - Use output in your own scripts or tools.
 - Suports RGB, HEX, HSL, CMYK
@@ -54,6 +54,19 @@ $ clid
 #### Uninstall:
 ```shell
 $ make uninstall
+```
+
+#### Update
+```shell
+# Navigate to repo folder and pull latest changes
+$ git pull origin main
+
+# Uninstall currently installed version
+$ make uninstall
+
+# Install & build new version
+$ make
+$ make install
 ```
 
 ## Showcase
